@@ -15,17 +15,17 @@ import java.util.Optional;
 
 public class PositionWithAssetJoinFunction extends KeyedCoProcessFunction<String, Asset, Position, Position> {
 
-    ValueState<Boolean> isAssetPresentState;
+    ValueState<Asset> assetState;
     ValueState<Position> positionState;
 
     @Override
     public void open(Configuration config) {
-        ValueStateDescriptor<Boolean> assetDescriptor =
+        ValueStateDescriptor<Asset> assetDescriptor =
                 new ValueStateDescriptor<>(
                         "asset",
-                        TypeInformation.of(Boolean.class),
+                        TypeInformation.of(Asset.class),
                         null);
-        isAssetPresentState = getRuntimeContext().getState(assetDescriptor);
+        assetState = getRuntimeContext().getState(assetDescriptor);
 
         ValueStateDescriptor<Position> positionDescriptor =
                 new ValueStateDescriptor<>(
@@ -39,15 +39,16 @@ public class PositionWithAssetJoinFunction extends KeyedCoProcessFunction<String
     public void processElement1(final Asset currentAsset,
             final KeyedCoProcessFunction<String, Asset, Position, Position>.Context ctx,
             final Collector<Position> out) throws IOException {
-        final Optional<Boolean> optionalIsAssetPresent = Optional.ofNullable(this.isAssetPresentState.value());
 
-        if (optionalIsAssetPresent.isPresent()) {
-            return;
+        this.assetState.update(currentAsset);
+        final Optional<Position> optionalPosition = Optional.ofNullable(positionState.value());
+
+        if (optionalPosition.isPresent()){
+            Position positionWithAsset = optionalPosition.get();
+            positionWithAsset.setAssetName(currentAsset.getName());
+            this.positionState.update(positionWithAsset);
         }
 
-        this.isAssetPresentState.update(true);
-
-        final Optional<Position> optionalPosition = Optional.ofNullable(positionState.value());
         optionalPosition.ifPresent(out::collect);
     }
 
@@ -65,8 +66,9 @@ public class PositionWithAssetJoinFunction extends KeyedCoProcessFunction<String
         positionState.update(currentPosition);
 
         // Check for asset
-        final Optional<Boolean> isAssetPresentOptional = Optional.ofNullable(isAssetPresentState.value());
-        if (isAssetPresentOptional.isPresent() && isAssetPresentOptional.get()) {
+        final Optional<Asset> assetOptional = Optional.ofNullable(assetState.value());
+        if (assetOptional.isPresent()) {
+            currentPosition.setAssetName(assetOptional.get().getName());
             out.collect(currentPosition);
         }
     }

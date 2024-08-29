@@ -8,6 +8,7 @@ import lombok.Setter;
 public class Position {
     private int id;
     private int assetId;
+    private String assetName;
     private String name;
     private Long timestamp;
 
@@ -16,6 +17,7 @@ public class Position {
         return "{" +
                 "id=" + id +
                 ", assetId=" + assetId +
+                ", assetName=" + assetName +
                 ", name='" + name + '\'' +
                 '}';
     }
