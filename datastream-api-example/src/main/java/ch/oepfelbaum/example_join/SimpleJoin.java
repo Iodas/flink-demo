@@ -42,6 +42,7 @@ public class SimpleJoin {
                 .setValueOnlyDeserializer(new PositionDeserializer())
                 .build();
 
+        // WATERMARK STRATEGY - Processing time
         WatermarkStrategy<Asset> assetWatermarkStrategy = WatermarkStrategy
                 .<Asset>forMonotonousTimestamps()
                 .withIdleness(Duration.ofSeconds(1))
